@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Analysis Detail — RequireAI{% endblock %}
+{% block page_title %}Analysis Detail{% endblock %}
+{% block topbar_actions %}<a href="{% url 'risk_analysis' %}" class="btn btn-secondary btn-sm">← New Analysis</a>{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+@media(max-width:900px){.detail-grid{grid-template-columns:1fr;}}
+.full{grid-column:1/-1;}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;}
+.detail-card-title{font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.detail-content{font-size:13px;color:var(--text2);line-height:1.9;white-space:pre-wrap;}
+.meta-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:22px;font-size:13px;color:var(--text2);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="meta-bar fade-up">
+    <span>📅 <strong>{{ analysis.created_at|date:"F d, Y · H:i" }}</strong></span>
+    <span>👤 <strong>{{ analysis.user.username }}</strong></span>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+        <button onclick="window.print()" class="btn btn-secondary btn-sm">🖨️ Print</button>
+        <a href="{% url 'risk_analysis' %}" class="btn btn-primary btn-sm">+ New Analysis</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-card full fade-up d1"><div class="detail-card-title" style="font-size:16px;">🎯 Problem Statement</div><div class="detail-content" style="font-size:14.5px;">{{ analysis.problem_statement }}</div></div>
+    <div class="detail-card fade-up d1"><div class="detail-card-title">⚙️ Functional Requirements</div><div class="detail-content">{{ analysis.features }}</div></div>
+    <div class="detail-card fade-up d2"><div class="detail-card-title">👤 User Stories</div><div class="detail-content">{{ analysis.user_stories }}</div></div>
+    <div class="detail-card fade-up d2"><div class="detail-card-title">🚀 MVP Scope</div><div class="detail-content">{{ analysis.mvp_scope }}</div></div>
+    <div class="detail-card fade-up d3"><div class="detail-card-title">🔮 Future Scope</div><div class="detail-content">{{ analysis.future_scope }}</div></div>
+    <div class="detail-card fade-up d3"><div class="detail-card-title">🛠️ Tech Stack</div><div class="detail-content">{{ analysis.tech_stack }}</div></div>
+    <div class="detail-card full fade-up d4"><div class="detail-card-title">⚠️ Risks &amp; Challenges</div><div class="detail-content">{{ analysis.risks }}</div></div>
+    {% if analysis.risk_analysis %}
+    <div class="detail-card full fade-up d4"><div class="detail-card-title">📊 Risk Analysis</div><div class="detail-content">{{ analysis.risk_analysis }}</div></div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% load markdownify %}
+{% block extra_css %}
+<style>
+    .markdown-content ul {
+    padding-left: 18px;
+    margin: 0;
+}
+
+.markdown-content li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.markdown-content li::marker {
+    color: var(--primary);
+    font-size: 14px;
+}
+.analyzer-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:22px;}
+@media(max-width:1100px){.analyzer-grid{grid-template-columns:1fr;}}
+
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;cursor:pointer;transition:all .18s;background:var(--bg);margin-bottom:14px;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--primary);background:var(--primary-light);}
+.upload-icon{font-size:32px;margin-bottom:9px;}
+.upload-text{font-size:13.5px;color:var(--text2);}
+.upload-text strong{color:var(--primary);}
+.upload-hint{font-size:11.5px;color:var(--text3);margin-top:5px;}
+
+.res-section{margin-bottom:18px;}
+.res-section-hdr{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.res-section-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.res-section-title{font-size:13.5px;font-weight:700;color:var(--text);}
+.res-box{background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px;
+    font-size:13px;
+    color:var(--text2);
+    line-height:1.7;
+    max-height:210px;
+    overflow-y:auto;
+}
+
+.hist-item{padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:7px;cursor:pointer;transition:all .18s;display:flex;justify-content:space-between;align-items:flex-start;}
+.hist-item:hover{border-color:var(--primary);background:var(--primary-light);}
+.hist-title{font-size:12.5px;font-weight:600;color:var(--text);}
+.hist-date{font-size:11px;color:var(--text3);margin-top:2px;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="loading-overlay" id="lo">
+    <div class="big-spinner"></div>
+    <div class="loading-text">🤖 AI is analyzing your idea...</div>
+    <div class="loading-sub">Extracting requirements, user stories &amp; acceptance criteria</div>
+</div>
+
+<p style="color:var(--text2);font-size:13.5px;margin-bottom:22px;">Upload your startup idea as text or PDF and get structured technical requirements instantly.</p>
+
+<div class="analyzer-grid">
+    <div>
+        <div class="card fade-up d1">
+            <div class="card-header"><div><div class="card-title">📝 Your Startup Idea</div><div class="card-subtitle">Describe your idea or upload a PDF</div></div></div>
+
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('pdfInput').click()">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text"><strong>Click to upload PDF</strong> or drag and drop</div>
+                <div class="upload-hint">PDF files only • Max 10MB</div>
+            </div>
+            <input type="file" id="pdfInput" name="pdf_file" accept=".pdf" style="display:none;" onchange="handleFile(this)">
+            <div id="fileInfo" style="font-size:12px;color:var(--primary);margin-bottom:11px;display:none;"></div>
+
+            <form method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('lo').classList.add('show')">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Or paste your idea as text</label>
+                    <textarea name="startup_idea" class="form-control" rows="8" placeholder="Describe your startup idea here...">{{ startup_idea|default:'' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Industry / Domain (optional)</label>
+                    <select name="industry" class="form-control">
+                        <option value="">Select industry...</option>
+                        <option>SaaS / Software</option><option>E-commerce</option>
+                        <option>FinTech</option><option>HealthTech</option>
+                        <option>EdTech</option><option>Marketplace</option>
+                        <option>Mobile App</option><option>AI / ML Product</option><option>Other</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full btn-lg">✨ Analyze Requirements</button>
+            </form>
+        </div>
+
+        {% if past_analyses %}
+        <div class="card" style="margin-top:18px;">
+            <div class="card-header"><div class="card-title">🕐 Recent Analyses</div></div>
+            {% for a in past_analyses %}
+            <a href="{% url 'risk_detail' a.id %}" style="text-decoration:none;">
+                <div class="hist-item">
+                    <div><div class="hist-title">{{ a.problem_statement|truncatechars:52 }}</div><div class="hist-date">{{ a.created_at|date:"M d, Y · H:i" }}</div></div>
+                    <span style="color:var(--text3);">→</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        {% if result %}
+        <div class="card fade-up">
+            <div class="card-header"><div><div class="card-title">✅ Analysis Results</div><div class="card-subtitle">AI-generated requirements</div></div><a href="{% url 'risk_detail' result.id %}" class="btn btn-secondary btn-sm">Full View</a></div>
+
+            <div class="res-section"><div class="res-section-hdr"><div class="res-section-icon" style="background:#EEF1FF;">🎯</div><span class="res-section-title">Problem Statement</span></div><div class="res-box">
+    {{ result.problem_statement }}
+            </div></div>
+            <div class="res-section"><div class="res-section-hdr"><div class="res-section-icon" style="background:#e8faf5;">⚙️</div><span class="res-section-title">Functional Requirements</span></div><div class="res-box markdown-content">
+    {{ result.features|markdownify }}
+</div></div>
+            <div class="res-section"><div class="res-section-hdr"><div class="res-section-icon" style="background:#fff4e3;">👤</div><span class="res-section-title">User Stories</span></div><div class="res-box markdown-content"><div class="res-box">
+    <div class="markdown-content">
+        {{ result.user_stories|markdownify }}
+    </div>
+</div>
+</div></div>
+            <div class="res-section"><div class="res-section-hdr"><div class="res-section-icon" style="background:#fff0f2;">🚀</div><span class="res-section-title">MVP Scope</span></div><div class="res-box">{{ result.mvp_scope }}</div></div>
+            <div class="res-section"><div class="res-section-hdr"><div class="res-section-icon" style="background:#e3f8f5;">🛠️</div><span class="res-section-title">Tech Stack</span></div><div class="res-box">{{ result.tech_stack }}</div></div>
+        </div>
+        {% else %}
+        <div class="card fade-up" style="min-height:380px;display:flex;align-items:center;justify-content:center;">
+            <div class="empty-state"><div class="empty-state-icon">📋</div><h3>No results yet</h3><p>Enter your startup idea on the left<br>and click Analyze Requirements</p></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const uz=document.getElementById('uploadZone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag-over');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag-over'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')showFile(f.name);});
+function handleFile(i){if(i.files[0])showFile(i.files[0].name);}
+function showFile(n){const el=document.getElementById('fileInfo');el.style.display='block';el.innerHTML='📎 '+n+' <span style="color:var(--success)">✓</span>';}
+</script>
+{% endblock %}

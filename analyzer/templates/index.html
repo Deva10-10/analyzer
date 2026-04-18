@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini AI Chatbot</title>
+    {% comment %} <link rel="stylesheet" href="{% static 'style.css' %}"> {% endcomment %}
+</head>
+<body>
+
+<h1 style="text-align:center;">Gemini AI Chatbot</h1>
+
+<form method="POST">
+    {% csrf_token %}
+    <input type="text" name="user_input" placeholder="Ask something..." required>
+    <button type="submit">Send</button>
+</form>
+
+<div class="card">
+    <h3>Response:</h3>
+    <p>{{ response }}</p>
+</div>
+
+<h3 style="text-align:center;">Your Chat History</h3>
+
+{% for chat in chats %}
+    <div class="card">
+        <p><strong>You:</strong> {{ chat.user_message }}</p>
+        <p><strong>Bot:</strong> {{ chat.bot_response }}</p>
+        <small>{{ chat.created_at }}</small>
+    </div>
+{% empty %}
+    <p style="text-align:center;">No chat history yet.</p>
+{% endfor %}
+
+</body>
+</html>

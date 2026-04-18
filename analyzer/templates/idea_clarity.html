@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}Idea Clarity Score — RequireAI{% endblock %}
+{% block page_title %}Idea Clarity Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.clarity-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:22px;}
+@media(max-width:1100px){.clarity-grid{grid-template-columns:1fr;}}
+
+.score-display{text-align:center;padding:28px 22px;background:linear-gradient(135deg,#f8f9ff,#EEF1FF);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:18px;}
+.gauge-wrap{position:relative;width:150px;height:150px;margin:0 auto 14px;}
+.gauge-svg{transform:rotate(-90deg);}
+.gauge-bg{fill:none;stroke:var(--border);stroke-width:11;}
+.gauge-fill{fill:none;stroke-width:11;stroke-linecap:round;transition:stroke-dashoffset 1.2s ease;}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.gauge-score{font-size:40px;font-weight:800;color:var(--text);line-height:1;}
+.gauge-denom{font-size:14px;color:var(--text3);font-weight:500;}
+.score-lbl{font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px;}
+.score-desc{font-size:12.5px;color:var(--text2);}
+
+.risk-display{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:var(--radius-sm);margin-bottom:18px;border:1px solid;font-weight:600;}
+.risk-icon{font-size:26px;}
+.risk-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.7;}
+.risk-value{font-size:17px;font-weight:800;}
+
+.bdwn-item{margin-bottom:12px;}
+.bdwn-label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text2);margin-bottom:4px;}
+.bdwn-track{background:var(--surface2);border-radius:99px;height:7px;overflow:hidden;}
+.bdwn-fill{height:100%;border-radius:99px;background:var(--primary);transition:width 1s ease;}
+
+.detail-block{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:11px;font-size:12.5px;color:var(--text2);line-height:1.85;white-space:pre-wrap;border-left:3px solid var(--primary);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="loading-overlay" id="lo">
+    <div class="big-spinner"></div>
+    <div class="loading-text">🤖 Evaluating your idea clarity...</div>
+    <div class="loading-sub">Scoring problem statement, market &amp; feasibility</div>
+</div>
+
+<p style="color:var(--text2);font-size:13.5px;margin-bottom:22px;">Get an AI-powered clarity score for your startup idea along with risk level and improvement suggestions.</p>
+
+<div class="clarity-grid">
+    <div>
+        <div class="card fade-up d1">
+            <div class="card-header"><div class="card-title">💡 Describe Your Idea</div></div>
+            <form method="POST" onsubmit="document.getElementById('lo').classList.add('show')">
+                {% csrf_token %}
+                <div class="form-group"><label class="form-label">Problem Statement</label><textarea name="problem_statement" class="form-control" rows="4" placeholder="What problem are you solving?">{{ problem_statement|default:'' }}</textarea></div>
+                <div class="form-group"><label class="form-label">Target Audience</label><input type="text" name="target_audience" class="form-control" placeholder="Who are your users?" value="{{ target_audience|default:'' }}"></div>
+                <div class="form-group"><label class="form-label">Proposed Solution</label><textarea name="solution" class="form-control" rows="4" placeholder="How does your product solve this problem?">{{ solution|default:'' }}</textarea></div>
+                <div class="form-group"><label class="form-label">Current Alternatives (optional)</label><input type="text" name="alternatives" class="form-control" placeholder="What do people use today?" value="{{ alternatives|default:'' }}"></div>
+                <button type="submit" class="btn btn-primary btn-full btn-lg">💡 Score My Idea</button>
+            </form>
+        </div>
+    </div>
+
+    <div>
+        {% if result %}
+        <div class="score-display fade-up">
+            <div class="gauge-wrap">
+                <svg class="gauge-svg" width="150" height="150" viewBox="0 0 150 150">
+                    <circle class="gauge-bg" cx="75" cy="75" r="62"/>
+                    <circle class="gauge-fill" cx="75" cy="75" r="62"
+                        stroke="{% if result.clarity_score >= 7 %}#06D6A0{% elif result.clarity_score >= 5 %}#FF9F1C{% else %}#EF233C{% endif %}"
+                        id="gf" stroke-dasharray="390" stroke-dashoffset="390"/>
+                </svg>
+                <div class="gauge-center">
+                    <div class="gauge-score" id="snum">{{ result.clarity_score }}</div>
+                    <div class="gauge-denom">/10</div>
+                </div>
+            </div>
+            <div class="score-lbl">{% if result.clarity_score >= 8 %}🌟 Excellent{% elif result.clarity_score >= 6 %}✅ Good{% elif result.clarity_score >= 4 %}⚠️ Needs Work{% else %}❌ Low Clarity{% endif %}</div>
+            <div class="score-desc">AI-evaluated problem clarity score</div>
+        </div>
+
+        {% if result.risk_level %}
+        <div class="risk-display fade-up"
+            {% if result.risk_level == 'High' %}style="background:#fff0f2;border-color:#fdd;color:#c0152a;"
+            {% elif result.risk_level == 'Medium' %}style="background:#fff4e3;border-color:#ffe0b2;color:#b36b00;"
+            {% else %}style="background:#e8faf5;border-color:#c3f0e4;color:#038a66;"{% endif %}>
+            <div class="risk-icon">{% if result.risk_level == 'High' %}🔴{% elif result.risk_level == 'Medium' %}🟡{% else %}🟢{% endif %}</div>
+            <div><div class="risk-label">Risk Level</div><div class="risk-value">{{ result.risk_level }}</div></div>
+        </div>
+        {% endif %}
+
+        {% if result.breakdown %}
+        <div class="card fade-up" style="margin-bottom:16px;">
+            <div class="card-title" style="margin-bottom:14px;">📊 Score Breakdown</div>
+            {% for item in result.breakdown %}
+            <div class="bdwn-item">
+                <div class="bdwn-label"><span>{{ item.label }}</span><span>{{ item.score }}/10</span></div>
+                <div class="bdwn-track"><div class="bdwn-fill" style="width:{{ item.score }}0%"></div></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if result.feedback %}
+        <div class="card fade-up" style="margin-bottom:14px;">
+            <div class="card-title" style="margin-bottom:12px;">💬 AI Feedback</div>
+            <div class="detail-block">{{ result.feedback }}</div>
+        </div>
+        {% endif %}
+
+        {% if result.suggestions %}
+        <div class="card fade-up">
+            <div class="card-title" style="margin-bottom:12px;">🔧 How to Improve</div>
+            <div class="detail-block">{{ result.suggestions }}</div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="card fade-up" style="min-height:380px;display:flex;align-items:center;justify-content:center;">
+            <div class="empty-state"><div class="empty-state-icon">💡</div><h3>No score yet</h3><p>Describe your idea on the left<br>and get an AI clarity score</p></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.addEventListener('load',()=>{
+    const fill=document.getElementById('gf');
+    const score=parseFloat(document.getElementById('snum')?.textContent||0);
+    if(fill&&score){
+        const c=2*Math.PI*62;
+        fill.style.strokeDasharray=c;
+        fill.style.strokeDashoffset=c;
+        setTimeout(()=>{fill.style.strokeDashoffset=c-(score/10)*c;},200);
+    }
+});
+</script>
+{% endblock %}

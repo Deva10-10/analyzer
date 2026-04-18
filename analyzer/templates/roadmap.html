@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}Roadmap Generator — RequireAI{% endblock %}
+{% block page_title %}Roadmap Generator{% endblock %}
+
+{% block extra_css %}
+<style>
+.rm-layout{display:grid;grid-template-columns:320px 1fr;gap:22px;}
+@media(max-width:1100px){.rm-layout{grid-template-columns:1fr;}}
+
+.timeline{position:relative;padding-left:26px;}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--border);}
+.phase-block{position:relative;margin-bottom:26px;}
+.phase-block:last-child{margin-bottom:0;}
+.phase-dot{position:absolute;left:-26px;top:4px;width:18px;height:18px;border-radius:50%;border:3px solid;display:flex;align-items:center;justify-content:center;background:var(--surface);z-index:1;}
+.phase-name-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.phase-name{font-size:14px;font-weight:700;color:var(--text);}
+.phase-dur{font-size:12px;color:var(--text3);}
+
+.task-list{list-style:none;}
+.task-item{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border);}
+.task-item:last-child{border-bottom:none;}
+.task-bullet{width:6px;height:6px;border-radius:50%;background:var(--primary);margin-top:6px;flex-shrink:0;}
+
+.milestone-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+.milestone-chip{background:var(--primary-light);color:var(--primary);border:1px solid rgba(67,97,238,.2);padding:4px 11px;border-radius:99px;font-size:11.5px;font-weight:600;}
+
+.rm-bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.rm-bar-label{font-size:12px;color:var(--text2);min-width:110px;}
+.rm-bar-track{flex:1;background:var(--surface2);border-radius:99px;height:11px;overflow:hidden;}
+.rm-bar-fill{height:100%;border-radius:99px;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="loading-overlay" id="lo">
+    <div class="big-spinner"></div>
+    <div class="loading-text">🗺️ Building your roadmap...</div>
+    <div class="loading-sub">Generating phases, milestones &amp; sprint plan</div>
+</div>
+
+<p style="color:var(--text2);font-size:13.5px;margin-bottom:22px;">Generate a detailed product roadmap with phases, tasks, and milestones tailored to your startup idea.</p>
+
+<div class="rm-layout">
+    <div>
+        <div class="card fade-up d1">
+            <div class="card-header"><div class="card-title">🗺️ Roadmap Details</div></div>
+            <form method="POST" onsubmit="document.getElementById('lo').classList.add('show')">
+                {% csrf_token %}
+                <div class="form-group"><label class="form-label">Startup Idea / Product</label><textarea name="startup_idea" class="form-control" rows="4" placeholder="Describe what you're building...">{{ startup_idea|default:'' }}</textarea></div>
+                <div class="form-group"><label class="form-label">Key Features (comma-separated)</label><textarea name="features" class="form-control" rows="3" placeholder="e.g. User auth, Dashboard, Payment, Notifications">{{ features|default:'' }}</textarea></div>
+                <div class="form-group">
+                    <label class="form-label">Team Size</label>
+                    <select name="team_size" class="form-control">
+                        <option value="solo">Solo founder</option>
+                        <option value="small">2–3 developers</option>
+                        <option value="medium">4–6 developers</option>
+                        <option value="large">7+ developers</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Launch Timeline</label>
+                    <select name="timeline" class="form-control">
+                        <option value="3mo">3 months (MVP fast)</option>
+                        <option value="6mo">6 months (Standard)</option>
+                        <option value="12mo">12 months (Full product)</option>
+                        <option value="18mo">18+ months (Enterprise)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Methodology</label>
+                    <select name="methodology" class="form-control">
+                        <option value="agile">Agile / Scrum (2-week sprints)</option>
+                        <option value="kanban">Kanban (continuous)</option>
+                        <option value="waterfall">Waterfall (phase-by-phase)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full btn-lg">🗺️ Generate Roadmap</button>
+            </form>
+        </div>
+    </div>
+
+    <div>
+        {% if result %}
+        {% if result.phases %}
+        <div class="card fade-up" style="margin-bottom:18px;">
+            <div class="card-title" style="margin-bottom:14px;">📊 Timeline Overview</div>
+            {% for phase in result.phases %}
+            <div class="rm-bar-row">
+                <div class="rm-bar-label">{{ phase.name }}</div>
+                <div class="rm-bar-track"><div class="rm-bar-fill" style="width:{{ phase.percent|default:'25' }}%;background:{% if forloop.counter == 1 %}var(--primary){% elif forloop.counter == 2 %}var(--secondary){% elif forloop.counter == 3 %}var(--warn){% else %}var(--success){% endif %};"></div></div>
+                <div style="font-size:11.5px;color:var(--text3);white-space:nowrap;">{{ phase.duration }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card fade-up">
+            <div class="card-header"><div><div class="card-title">🗺️ Product Roadmap</div><div class="card-subtitle">Phases, tasks &amp; milestones</div></div><span class="badge badge-primary">{{ result.total_duration|default:'Custom' }}</span></div>
+            <div class="timeline">
+                {% if result.phases %}
+                    {% for phase in result.phases %}
+                    <div class="phase-block">
+                        <div class="phase-dot" style="border-color:{% if forloop.counter == 1 %}var(--primary){% elif forloop.counter == 2 %}var(--secondary){% elif forloop.counter == 3 %}var(--warn){% else %}var(--success){% endif %};"></div>
+                        <div class="phase-name-row">
+                            <span class="phase-name">{% if forloop.counter == 1 %}🔵{% elif forloop.counter == 2 %}🟢{% elif forloop.counter == 3 %}🟡{% else %}🟣{% endif %} Phase {{ forloop.counter }}: {{ phase.name }}</span>
+                            <span class="phase-dur">{{ phase.duration }}</span>
+                        </div>
+                        <ul class="task-list">
+                            {% for task in phase.tasks %}<li class="task-item"><div class="task-bullet"></div>{{ task }}</li>{% endfor %}
+                        </ul>
+                        {% if phase.milestones %}<div class="milestone-row">{% for m in phase.milestones %}<span class="milestone-chip">🏁 {{ m }}</span>{% endfor %}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="font-size:12.5px;color:var(--text2);line-height:1.9;white-space:pre-wrap;">{{ result.roadmap_text }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if result.launch_checklist %}
+        <div class="card fade-up" style="margin-top:18px;">
+            <div class="card-title" style="margin-bottom:12px;">🚀 Launch Checklist</div>
+            {% for item in result.launch_checklist %}
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text2);">
+                <input type="checkbox" style="accent-color:var(--primary);width:15px;height:15px;">{{ item }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="card fade-up" style="min-height:480px;display:flex;align-items:center;justify-content:center;">
+            <div class="empty-state"><div class="empty-state-icon">🗺️</div><h3>No roadmap yet</h3><p>Fill in your project details on the left<br>to generate an AI roadmap</p></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
