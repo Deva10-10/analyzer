@@ -21,7 +21,7 @@ from .models import ChatHistory, RequirementAnalysis
 # ══════════════════════════════════════════════
 # def GEMINI_API_KEY(prompt: str) -> str:
 #     import google.generativeai as genai
-#     genai.configure(api_key="AIzaSyBJBWNthlPDDB_0hprLfrXRgGe3k6w6bNc")
+#     genai.configure(api_key="123")
 #     model = genai.GenerativeModel("gemini-pro")
 #     return model.generate_content(prompt).text
 def generate_ai_response(prompt):
